@@ -1,22 +1,27 @@
-from fastapi import FastAPI, Body, Request
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Body, Response
+from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import os
 
 app = FastAPI()
 
+# We'll use the middleware AND manual headers for maximum compatibility
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 FILE_PATH = os.path.join(os.path.dirname(__file__), "telemetry_pings.json")
 
-# A global headers dictionary to ensure consistency
-CORS_HEADERS = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-}
-
 @app.options("/{rest_of_path:path}")
-async def preflight_handler():
-    return JSONResponse(content="OK", headers=CORS_HEADERS)
+async def preflight():
+    return Response(status_code=200, headers={
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*"
+    })
 
 @app.post("/api/latency")
 async def calculate_metrics(regions: list = Body(...), threshold_ms: int = Body(...)):
@@ -31,5 +36,4 @@ async def calculate_metrics(regions: list = Body(...), threshold_ms: int = Body(
                 "avg_uptime": float(region_df['uptime_pct'].mean()),
                 "breaches": int((region_df['latency_ms'] > threshold_ms).sum())
             }
-    
-    return JSONResponse(content=results, headers=CORS_HEADERS)
+    return results
