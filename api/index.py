@@ -1,17 +1,8 @@
-from fastapi import FastAPI, Body, Response
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, Body
 import pandas as pd
 import os
 
 app = FastAPI()
-
-# Standard Middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["POST", "GET", "OPTIONS"],
-    allow_headers=["*"],
-)
 
 FILE_PATH = os.path.join(os.path.dirname(__file__), "telemetry_pings.json")
 
@@ -20,10 +11,7 @@ def health():
     return {"status": "online"}
 
 @app.post("/api")
-async def calculate_metrics(response: Response, regions: list = Body(...), threshold_ms: int = Body(...)):
-    # Manual Header Injection (This fixes the "Enable CORS" error for good)
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    
+async def calculate_metrics(regions: list = Body(...), threshold_ms: int = Body(...)):
     if not os.path.exists(FILE_PATH):
         return {"error": "Data file not found"}
 
@@ -41,5 +29,4 @@ async def calculate_metrics(response: Response, regions: list = Body(...), thres
             "avg_uptime": float(region_df['uptime_pct'].mean()),
             "breaches": int((region_df['latency_ms'] > threshold_ms).sum())
         }
-        
     return results
