@@ -5,7 +5,6 @@ import os
 
 app = FastAPI()
 
-# Permissive CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,9 +12,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# This confirms the file path for Vercel
 FILE_PATH = os.path.join(os.path.dirname(__file__), "telemetry_pings.json")
 
-# This will catch BOTH /api and /api/latency if you use the catch-all rewrite
+@app.get("/api/health")
+def health():
+    return {"status": "online"}
+
 @app.post("/api/latency")
 async def calculate_metrics(regions: list = Body(...), threshold_ms: int = Body(...)):
     df = pd.read_json(FILE_PATH)
@@ -30,7 +33,3 @@ async def calculate_metrics(regions: list = Body(...), threshold_ms: int = Body(
                 "breaches": int((region_df['latency_ms'] > threshold_ms).sum())
             }
     return results
-
-@app.get("/api/health")
-def health():
-    return {"status": "online"}
