@@ -21,7 +21,7 @@ FILE_PATH = os.path.join(os.path.dirname(__file__), "telemetry_pings.json")
 def health():
     return {"status": "online"}
 
-@app.post("/api")
+@app.post("/api/latency")
 async def calculate_metrics(regions: list = Body(...), threshold_ms: int = Body(...)):
     if not os.path.exists(FILE_PATH):
         return {"error": "Data file not found"}
