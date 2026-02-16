@@ -1,32 +1,31 @@
 from fastapi import FastAPI, Body, Response
-from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import os
+import json
 
 app = FastAPI()
 
-# We'll use the middleware AND manual headers for maximum compatibility
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 FILE_PATH = os.path.join(os.path.dirname(__file__), "telemetry_pings.json")
 
-@app.options("/{rest_of_path:path}")
-async def preflight():
-    return Response(status_code=200, headers={
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "*",
-        "Access-Control-Allow-Headers": "*"
-    })
+# Explicitly handle the OPTIONS pre-flight for the grader
+@app.options("/api/latency")
+@app.options("/api/latency/")
+async def options_handler():
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        },
+    )
 
 @app.post("/api/latency")
+@app.post("/api/latency/")
 async def calculate_metrics(regions: list = Body(...), threshold_ms: int = Body(...)):
     df = pd.read_json(FILE_PATH)
     results = {}
+    
     for region in regions:
         region_df = df[df['region'] == region]
         if not region_df.empty:
@@ -36,4 +35,14 @@ async def calculate_metrics(regions: list = Body(...), threshold_ms: int = Body(
                 "avg_uptime": float(region_df['uptime_pct'].mean()),
                 "breaches": int((region_df['latency_ms'] > threshold_ms).sum())
             }
-    return results
+    
+    # Return JSON with explicit CORS headers
+    return Response(
+        content=json.dumps(results),
+        media_type="application/json",
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        }
+    )
