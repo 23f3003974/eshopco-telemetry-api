@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Body, Response
+from fastapi import FastAPI, Body, Response, Request
 import pandas as pd
 import os
 
@@ -6,19 +6,21 @@ app = FastAPI()
 
 FILE_PATH = os.path.join(os.path.dirname(__file__), "telemetry_pings.json")
 
-# This catches the "pre-flight" request the grader sends
-@app.options("/{path:path}")
-async def preflight(path: str, response: Response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    return {}
+# Explicitly handle OPTIONS for the specific path
+@app.options("/api/latency")
+async def options_handler():
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        },
+    )
 
 @app.post("/api/latency")
-async def calculate_metrics(response: Response, regions: list = Body(...), threshold_ms: int = Body(...)):
-    # Attach header to the successful response
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    
+async def calculate_metrics(regions: list = Body(...), threshold_ms: int = Body(...)):
+    # Calculate metrics
     df = pd.read_json(FILE_PATH)
     results = {}
     for region in regions:
@@ -30,4 +32,14 @@ async def calculate_metrics(response: Response, regions: list = Body(...), thres
                 "avg_uptime": float(region_df['uptime_pct'].mean()),
                 "breaches": int((region_df['latency_ms'] > threshold_ms).sum())
             }
-    return results
+    
+    # Return with explicit headers to bypass middleware issues
+    return Response(
+        content=pd.Series(results).to_json(),
+        media_type="application/json",
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
