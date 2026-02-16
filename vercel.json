@@ -1,5 +1,16 @@
-{
+{{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS,POST" },
+        { "key": "Access-Control-Allow-Headers", "value": "*" }
+      ]
+    }
+  ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "api/index.py" }
+    { "source": "/api/latency", "destination": "api/index.py" },
+    { "source": "/api/(.*)", "destination": "api/index.py" }
   ]
 }
