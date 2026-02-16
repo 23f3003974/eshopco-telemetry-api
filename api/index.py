@@ -1,8 +1,19 @@
 from fastapi import FastAPI, Body
 import pandas as pd
 import os
+from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,  # Note: Must be False if allow_origins is "*"
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 FILE_PATH = os.path.join(os.path.dirname(__file__), "telemetry_pings.json")
 
